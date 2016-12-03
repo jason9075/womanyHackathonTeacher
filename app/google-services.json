@@ -1,0 +1,99 @@
+{
+  "project_info": {
+    "project_number": "720455308568",
+    "firebase_url": "https://womany-hackathon.firebaseio.com",
+    "project_id": "womany-hackathon",
+    "storage_bucket": "womany-hackathon.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:720455308568:android:a3b6e85e3368169c",
+        "android_client_info": {
+          "package_name": "com.jason9075.womanyhackathon"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "720455308568-mgpumnc7jtaumsm24hrrm9bgb4shrri1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jason9075.womanyhackathon",
+            "certificate_hash": "86AA5499305695CBF976A506B99D11849BC2374F"
+          }
+        },
+        {
+          "client_id": "720455308568-av526qn9ijgrlgksop9uiaago0bjrqnr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyyc1_ICRThDA4Hci-o1L19wTzv26bRFg"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "720455308568-av526qn9ijgrlgksop9uiaago0bjrqnr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:720455308568:android:26206e1b66ef978e",
+        "android_client_info": {
+          "package_name": "com.jason9075.womanyhackathonteacher"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "720455308568-3b9vv0bs4j4u6kqpl8g59fph0o5587r7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jason9075.womanyhackathonteacher",
+            "certificate_hash": "86AA5499305695CBF976A506B99D11849BC2374F"
+          }
+        },
+        {
+          "client_id": "720455308568-av526qn9ijgrlgksop9uiaago0bjrqnr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyyc1_ICRThDA4Hci-o1L19wTzv26bRFg"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "720455308568-av526qn9ijgrlgksop9uiaago0bjrqnr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
