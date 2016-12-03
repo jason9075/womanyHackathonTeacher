@@ -23,11 +23,19 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.jason9075.womanyhackathonteacher.Utils.DateFormatCached;
+import com.jason9075.womanyhackathonteacher.manager.AlertManager;
 import com.jason9075.womanyhackathonteacher.manager.MyLocationManager;
 import com.jason9075.womanyhackathonteacher.model.StudentLocationData;
 import com.tbruyelle.rxpermissions.RxPermissions;
 
+import org.joda.time.format.DateTimeFormatter;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +54,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Inject
     MyLocationManager locationManager;
+
+    @Inject
+    AlertManager alertManager;
 
     private CompositeSubscription compositeSubscription = new CompositeSubscription();
     private Subscription centerMapIntervalSubscription;
@@ -98,8 +109,30 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         studentLocationData.setLatitude((Double) mapObj.get("latitude"));
                         studentLocationData.setLongitude((Double) mapObj.get("longitude"));
                         studentLocationData.setAddress((String) mapObj.get("address"));
+                        studentLocationData.setDate((String) mapObj.get("date"));
                         studentDataList.add(studentLocationData);
                     }
+                }
+
+                final SimpleDateFormat formatter = DateFormatCached.INSTANCE.getFormat("yyyy/MM/dd HH:mm:ss");
+
+                Collections.sort(studentDataList, new Comparator<StudentLocationData>() {
+                    @Override
+                    public int compare(StudentLocationData lhs, StudentLocationData rhs) {
+                        try {
+                            return formatter.parse(lhs.getDate()).compareTo(formatter.parse(rhs.getDate()));
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                            return 0;
+                        }
+
+                    }
+                });
+
+                try {
+                    alertManager.checkIsUserTriggerAlertTemp(MainActivity.this, formatter.parse(studentDataList.get(studentDataList.size() - 1).getDate()));
+                } catch (ParseException e) {
+                    e.printStackTrace();
                 }
 
                 drawMarkers(studentDataList);
