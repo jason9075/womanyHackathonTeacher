@@ -6,6 +6,10 @@ import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -26,27 +30,33 @@ import com.google.firebase.database.ValueEventListener;
 import com.jason9075.womanyhackathonteacher.Utils.DateFormatCached;
 import com.jason9075.womanyhackathonteacher.manager.AlertManager;
 import com.jason9075.womanyhackathonteacher.manager.MyLocationManager;
+import com.jason9075.womanyhackathonteacher.manager.RetrofitManager;
+import com.jason9075.womanyhackathonteacher.model.GoogleMapLocationResult;
 import com.jason9075.womanyhackathonteacher.model.StudentLocationData;
+import com.jason9075.womanyhackathonteacher.view.MyInfoWindowAdapter;
 import com.tbruyelle.rxpermissions.RxPermissions;
-
-import org.joda.time.format.DateTimeFormatter;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
 import rx.Observable;
+import rx.Subscriber;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
+import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 import rx.subscriptions.CompositeSubscription;
 
@@ -66,19 +76,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private boolean isAtLeastCenterUserLocation = false; // 至少有一次有定位到使用者的位置
     private DatabaseReference mFirebaseDatabaseReference;
-
+    private TextView addressTextview;
+    private ImageButton alertButton;
 
     private GoogleMap googleMap;
     private MapFragment map;
+    private List<StudentLocationData> studentDataList;
+    private SimpleDateFormat formatter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         MyApp.getComponents().inject(this);
+        addressTextview = (TextView) findViewById(R.id.address_text_view);
+        alertButton = (ImageButton) findViewById(R.id.alert_button);
+        studentDataList = new ArrayList<>();
+
 
         mFirebaseDatabaseReference = FirebaseDatabase.getInstance().getReference();
         map = ((MapFragment) getFragmentManager().findFragmentById(R.id.map));
+
+        alertButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alertManager.closeRingtonIfNeed();
+            }
+        });
 
         /* 使用者沒有答應權限的情況 */
         RxPermissions.getInstance(this)
@@ -96,12 +120,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         ValueEventListener postListener = new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-
                 Map<String, Object> objectMap = (HashMap<String, Object>) dataSnapshot.child("StudentLocationTable").getValue();
                 if (objectMap == null) {
                     return;
                 }
-                List<StudentLocationData> studentDataList = new ArrayList<>();
+                studentDataList.clear();
                 for (Object obj : objectMap.values()) {
                     if (obj instanceof Map) {
                         Map<String, Object> mapObj = (HashMap<String, Object>) obj;
@@ -114,7 +137,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
                 }
 
-                final SimpleDateFormat formatter = DateFormatCached.INSTANCE.getFormat("yyyy/MM/dd HH:mm:ss");
+                formatter = DateFormatCached.INSTANCE.getFormat("yyyy/MM/dd HH:mm:ss");
 
                 Collections.sort(studentDataList, new Comparator<StudentLocationData>() {
                     @Override
@@ -129,13 +152,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
                 });
 
-                try {
-                    alertManager.checkIsUserTriggerAlertTemp(MainActivity.this, formatter.parse(studentDataList.get(studentDataList.size() - 1).getDate()));
-                } catch (ParseException e) {
-                    e.printStackTrace();
-                }
-
-                drawMarkers(studentDataList);
+                drawMarkers();
             }
 
             @Override
@@ -145,9 +162,42 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         };
         mFirebaseDatabaseReference.addValueEventListener(postListener);
 
+        compositeSubscription.add(Observable.just(1)
+                .delay(5, TimeUnit.SECONDS)
+                .observeOn(AndroidSchedulers.mainThread())
+                .repeatWhen(new Func1<Observable<? extends Void>, Observable<?>>() {
+                    @Override
+                    public Observable<?> call(Observable<? extends Void> observable) {
+                        return observable.repeat();
+                    }
+                })
+                .subscribe(new Subscriber<Object>() {
+                    @Override
+                    public void onCompleted() {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        Toast.makeText(MainActivity.this, "網路連線錯誤", Toast.LENGTH_LONG).show();
+                    }
+
+                    @Override
+                    public void onNext(Object o) {
+                        if(studentDataList.size()==0)
+                            return;
+                        try {
+                            alertManager.checkIsUserTriggerAlertTemp(MainActivity.this, formatter.parse(studentDataList.get(studentDataList.size() - 1).getDate()));
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                }));
+
     }
 
-    private void drawMarkers(List<StudentLocationData> studentDataList) {
+    private void drawMarkers() {
         List<LatLng> list = new ArrayList<>();
         for (StudentLocationData studentLocationData : studentDataList) {
             list.add(new LatLng(studentLocationData.getLatitude(), studentLocationData.getLongitude()));
@@ -158,13 +208,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         polyOptions.addAll(list);
         googleMap.clear();
         googleMap.addPolyline(polyOptions);
-        LatLngBounds.Builder builder = new LatLngBounds.Builder();
-        for (LatLng latLng : list) {
-            builder.include(latLng);
-        }
-        final LatLngBounds bounds = builder.build();
-        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, 4);
-        googleMap.animateCamera(cu);
+//        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+//        for (LatLng latLng : list) {
+//            builder.include(latLng);
+//        }
+//        final LatLngBounds bounds = builder.build();
+//        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, 4);
+//        googleMap.animateCamera(cu);
 
     }
 
@@ -176,6 +226,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
+        MyInfoWindowAdapter myInfoWindowAdapter = new MyInfoWindowAdapter(this, "王小美", new Date());
+
         Location location = MyLocationManager.tryGetLastLocation();
 
 
@@ -194,6 +246,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         googleMap.getUiSettings().setMapToolbarEnabled(false);
         googleMap.getUiSettings().setMyLocationButtonEnabled(true);
         googleMap.setMyLocationEnabled(false);
+        googleMap.setInfoWindowAdapter(myInfoWindowAdapter);
 
         /* 第一次定位 */
         centerTheMap(location);
@@ -203,12 +256,29 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (!isAtLeastCenterUserLocation) {
             centerMapIntervalSubscription = Observable.interval(5, TimeUnit.SECONDS, Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Action1<Long>() {
+                    .flatMap(new Func1<Long, Observable<GoogleMapLocationResult>>() {
                         @Override
-                        public void call(Long longValue) {
+                        public Observable<GoogleMapLocationResult> call(Long aLong) {
                             Location location = MyLocationManager.tryGetLastLocation();
                             centerTheMap(location);
                             setMarker(location);
+                            return RetrofitManager.INSTANCE.requestAddress(location, true);
+                        }
+                    })
+                    .subscribe(new Subscriber<GoogleMapLocationResult>() {
+                        @Override
+                        public void onCompleted() {
+
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+
+                        }
+
+                        @Override
+                        public void onNext(GoogleMapLocationResult googleMapLocationResult) {
+                            addressTextview.setText(RetrofitManager.INSTANCE.getLastAddress());
                         }
                     });
             compositeSubscription.add(centerMapIntervalSubscription);

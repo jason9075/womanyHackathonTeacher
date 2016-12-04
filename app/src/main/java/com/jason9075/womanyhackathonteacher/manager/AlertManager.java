@@ -13,8 +13,13 @@ import com.jason9075.womanyhackathonteacher.MyApp;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
+
+import rx.Observable;
+import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
 
 /**
  * Created by jason9075 on 2016/12/4.
@@ -61,7 +66,7 @@ public class AlertManager {
         mediaPlayer.start();
         vibrator.vibrate(PATTERN, 0);
         new AlertDialog.Builder(((MyApp) applicationContext).getCurrentActivity())
-                .setTitle("Info")
+                .setTitle("警報")
                 .setMessage(message)
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
@@ -69,7 +74,26 @@ public class AlertManager {
                         if (mediaPlayer.isPlaying())
                             mediaPlayer.pause();
                         vibrator.cancel();
-                        isDialogShow = false;
+
+                        Observable.just(1)
+                                .delay(15, TimeUnit.SECONDS)
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe(new Subscriber<Integer>() {
+                                    @Override
+                                    public void onCompleted() {
+                                        isDialogShow = false;
+                                    }
+
+                                    @Override
+                                    public void onError(Throwable e) {
+
+                                    }
+
+                                    @Override
+                                    public void onNext(Integer integer) {
+
+                                    }
+                                });
                     }
                 })
                 .show();
@@ -81,12 +105,17 @@ public class AlertManager {
         if (!((MyApp) applicationContext).getCurrentActivity().equals(activity)) //此Activity 不是在畫面最上層的Activity時 不做事
             return;
 
-        if ((new Date().getTime() - lastDate.getTime()) / 1000 < 20) {//少於20秒 還算是安全
+        if ((new Date().getTime() - lastDate.getTime()) / 1000 < 10) {//少於10秒 還算是安全
             return;
         }
         if (!isDialogShow) {
             showAlertView("警報! 學生位置訊號不明");
         }
+    }
+
+    public void closeRingtonIfNeed() {
+        if (mediaPlayer.isPlaying())
+            mediaPlayer.pause();
     }
 
 
